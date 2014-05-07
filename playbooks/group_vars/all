@@ -1,0 +1,5 @@
+dist_name:
+  - jenkins-ansible-ci-dist
+
+local:
+  - localhost
