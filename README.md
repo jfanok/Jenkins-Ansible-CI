@@ -107,6 +107,53 @@ Instructions for installing Ansible are here - http://docs.ansible.com/intro_ins
 Thats it! Ansible should now be installed on your server.
 
 
+Now you will want to configure ansible to work with your aws inventory in order to launch new instances. The instructions to do so are provided here http://docs.ansible.com/intro_dynamic_inventory.html#example-aws-ec2-external-inventory-script
+
+You want to make sure you have pip installed and then make sure you use pip to install the boto module in order for the ec2 script to work.
+
+Also make sure to setup your AWS_ACCESS_KEY_ID and your AWS_SECRET_ACCESS_KEY in order to authenticate your account.
+
+
+
+Launch a new EC2 Instance with ansible
+
+
+You can now run the launch-server.yml playbook which will launch a new EC2 with the configurations specified in the play.
+
+This ec2 server can now be referenced given its tag name, which allows us to communicate with our instances remotely from our CI server.
+
+
+Set Up Your Build Configurations
+
+Within the jenkins Job configuration you can now set up tasks to run on a build. For our Jenkins build configuration we want to keep the build logic as simple as possible so we will separate our build logic into Ansible playbooks & plays. This way we are able to reuse plays if necessary in different projects without having to reconfigure a lot of stuff in Jenkins.
+
+For our specific project we want to test our service to make sure it passes our requirements, compile/package our project, distribute our executables to the desired EC2 instance, and finally kill our old build and boot our new build.
+
+We can separate this logic into ansible roles. We create test, package, distribute, and deploy roles inside of our playbooks directory. Test executes sbt test-only, package executes sbt build, distribute copies over our executables to our ec2 instance, and deploy checks for a running service and kills it if its up and then initiates the new executables.
+
+We can create a playbook 'test-package.yml' with the test and package roles and add the flag -i files/localhosts to select this playbook to run locally. We can the create another playbook 'distribute-deploy' with the distribute, undeploy, and deploy roles to be run remotely on the EC2 instances.
+
+Finally under your jenkins build configurations we execute these commands in order using 
+> ansible-playbook -i files/localhosts test-package.yml
+
+and 
+> ansible-playbook distribute-deploy.yml
+
+If any of the plays fail, Jenkins marks the build as failed. You can also view the console output through jenkins' GUI.
+
+
+
+Setting up Github Hook Polling on Jenkins
+
+Within Jenkins under a Job's build configuration you can setup scm polling with a cron schedule to poll for events. This checks for any messages sent to the project endpoint. 
+
+You can setup your github project to register changes such as commits or pull requests. This allows you to do things like run tests before pull requests are allowed to be merged. In our example we want to send a message to Jenkins to notify the project to run a new build.
+
+
+
+We successfully configured a continuous integration server to monitor repo commits and merges and deploy a new build to our remote server. 
+
+
 
 
 
